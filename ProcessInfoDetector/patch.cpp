@@ -54,7 +54,6 @@ BOOL Patch::hookFunc(LPCTSTR module_name,LPCSTR func_name,DWORD code_size,DWORD_
 	/*
 	->save context
 
-
 	->
 	1、myProc
 
@@ -90,25 +89,48 @@ BOOL Patch::hookFunc(LPCTSTR module_name,LPCSTR func_name,DWORD code_size,DWORD_
 	PVOID ret_code_area = (PVOID)((DWORD_PTR)old_code_area + old_code_size);
 
 	FillMemory(code_area, size, 0x90);
-
+	DWORD_PTR p = NULL;
+	PCHAR machine_code = NULL;
+	DWORD machine_code_size = 0;
 	//***save context
 	//push rcx
 	//push rdx
 	//push r8
 	//push r9
 	//sub rsp,48h
+	p = (DWORD_PTR)save_context_area;
 
+	machine_code_size = getMachineCode(machine_code, PUSH_RCX, (DWORD_PTR)func);
+	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	p = p + machine_code_size;
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 
-	//1.my proc
+	machine_code_size = getMachineCode(machine_code, PUSH_RDX, NULL);
+	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	p = p + machine_code_size;
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+
+	machine_code_size = getMachineCode(machine_code, PUSH_R8, NULL);
+	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	p = p + machine_code_size;
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+
+	machine_code_size = getMachineCode(machine_code, PUSH_R9, NULL);
+	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	p = p + machine_code_size;
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+	//抬栈，CALL的时候rsp需要0x10对齐，否则浮点数运算会出错
+	machine_code_size = getMachineCode(machine_code, SUB_RSP, (DWORD_PTR)0x48);
+	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	p = p + machine_code_size;
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+	//1.my proc	手动模拟call
 	//mov rax,ret_address
 	//push rax
 	//mov rax,func
 	//push rax
 	//ret
-	DWORD_PTR p = (DWORD_PTR)my_call_area;
-	PCHAR machine_code = NULL;
-	DWORD machine_code_size = 0;
-	//抬栈，CALL的时候rsp需要0x10对齐，否则浮点数运算会出错
+	p = (DWORD_PTR)my_call_area;
 
 	machine_code_size = getMachineCode(machine_code, MOV_RAX_8B, (DWORD_PTR)func);
 	CopyMemory((PVOID)p, machine_code, machine_code_size);
@@ -136,19 +158,36 @@ BOOL Patch::hookFunc(LPCTSTR module_name,LPCSTR func_name,DWORD code_size,DWORD_
 	//pop r8
 	//pop rdx
 	//pop rcx
+	p = (DWORD_PTR)load_context_area;
 
+	machine_code_size = getMachineCode(machine_code, ADD_RSP, (DWORD_PTR)0x48);
+	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	p = p + machine_code_size;
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+
+	machine_code_size = getMachineCode(machine_code, POP_R9, NULL);
+	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	p = p + machine_code_size;
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+
+	machine_code_size = getMachineCode(machine_code, POP_R8, NULL);
+	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	p = p + machine_code_size;
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+
+	machine_code_size = getMachineCode(machine_code, POP_RDX, NULL);
+	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	p = p + machine_code_size;
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+
+	machine_code_size = getMachineCode(machine_code, POP_RCX, NULL);
+	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	p = p + machine_code_size;
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 
 	//2.old code
 	CopyMemory((PVOID)old_code_area, (PVOID)func_base, old_code_size);
-	/*
-	//mov rax,offset mycall ;call rax 12Byte
-	//由于myCall外部导入，因此myCall指向的是一个jmp 
-	//由于jmp是相对跳，这里计算myCall的绝对地址
-	LONG offset = NULL;
-	DWORD_PTR offset_address = (DWORD_PTR)myCall + 1;
-	CopyMemory((PVOID)&offset, (PVOID)offset_address, 4);
-	DWORD_PTR real_address = (DWORD_PTR)myCall + 5 + offset;
-	*/
+
 	//3.ret code
 	DWORD_PTR ret_address = (DWORD_PTR)func_base + old_code_size;
 	machine_code_size = getMachineCode(machine_code, MOV_PUSH_RET, ret_address);
@@ -240,6 +279,107 @@ DWORD Patch::getMachineCode(PCHAR &machine_code,DWORD assembly_code,DWORD_PTR pa
 		break;
 #endif
 		return code_size;
+	}
+	case(PUSH_RCX): {
+#if defined _WIN64
+		code_size = 1;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x51 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+	}
+	case(PUSH_RDX): {
+#if defined _WIN64
+		code_size = 1;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x52 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+	}
+	case(PUSH_R8): {
+#if defined _WIN64
+		code_size = 2;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x41,0x50 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+	}
+	case(PUSH_R9): {
+#if defined _WIN64
+		code_size = 2;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x41,0x51 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+
+	}
+	case(POP_R9): {
+#if defined _WIN64
+		code_size = 2;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x41,0x59 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+
+	}
+	case(POP_R8): {
+#if defined _WIN64
+		code_size = 2;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x41,0x58 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+
+	}
+	case(POP_RDX): {
+#if defined _WIN64
+		code_size = 1;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x5A };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+
+	}
+	case(POP_RCX): {
+#if defined _WIN64
+		code_size = 1;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x59 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+
 	}
 	default: {
 		return 0;

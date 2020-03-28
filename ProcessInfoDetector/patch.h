@@ -12,7 +12,23 @@ VOID myProc();
 #define SUB_RSP 5
 //pop rax
 #define POP_RAX 6
+// push rcx
+#define PUSH_RCX 7
+//push rdx
+#define PUSH_RDX 8
+//push r8
+#define PUSH_R8 9
+//push r9
+#define PUSH_R9 10
 
+//pop r9
+#define POP_R9 11
+//pop r8
+#define POP_R8 12
+//pop rdx
+#define POP_RDX 13
+//pop rcx
+#define POP_RCX 14
 
 class Patch{
 public:
