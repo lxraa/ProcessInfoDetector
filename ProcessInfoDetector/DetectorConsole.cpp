@@ -10,6 +10,7 @@
 #include <psapi.h>
 #include "HookDialog.h"
 #include "VEHConsole.h"
+#include "PatchConsole.h"
 // DetectorConsole 对话框
 typedef NTSTATUS (WINAPI*ZWQUERYINFORMATIONTHREAD)(
 _In_      HANDLE          ThreadHandle,
@@ -41,7 +42,6 @@ void DetectorConsole::DoDataExchange(CDataExchange* pDX)
 
 
 BEGIN_MESSAGE_MAP(DetectorConsole, CDialogEx)
-	ON_BN_CLICKED(IDC_BUTTON1, &DetectorConsole::OnBnClickedButton1)
 	ON_BN_CLICKED(IDC_BUTTON2, &DetectorConsole::OnBnClickedButton2)
 	ON_BN_CLICKED(IDC_BUTTON3, &DetectorConsole::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON5, &DetectorConsole::OnBnClickedButton5)
@@ -52,49 +52,43 @@ END_MESSAGE_MAP()
 // DetectorConsole 消息处理程序
 
 
-void DetectorConsole::OnBnClickedButton1()
-{
-
-	m_list.ResetContent();
-	HINSTANCE h_ntdll = GetModuleHandle(TEXT("ntdll"));
-	ZWQUERYINFORMATIONTHREAD ZwQueryInformationThread = (ZWQUERYINFORMATIONTHREAD)GetProcAddress(h_ntdll, "ZwQueryInformationThread");
-
-	THREADENTRY32 t;
-	t.dwSize = sizeof(THREADENTRY32);
-	HANDLE h = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, GetCurrentProcessId());
-	if (INVALID_HANDLE_VALUE == h) {
-		MessageBox(TEXT("创建线程快照失败"));
-		return;
-	}
-	if (Thread32First(h,&t)) {
-		do {
-			CString c;
-			PVOID addr;
-			HANDLE h_thread = OpenThread(THREAD_ALL_ACCESS, FALSE, t.th32ThreadID);
-			ZwQueryInformationThread(h_thread, ThreadQuerySetWin32StartAddress, &addr, sizeof(addr), NULL);
-			THREAD_BASIC_INFORMATION tbi;
-			TCHAR modname[MAX_PATH];
-			ZwQueryInformationThread(h_thread, ThreadBasicInformation, &tbi, sizeof(tbi), NULL);
-			GetMappedFileName(OpenProcess(PROCESS_ALL_ACCESS, FALSE, (DWORD)tbi.ClientId.UniqueProcess), addr, modname, MAX_PATH);
-
-			c.Format(TEXT("thread id:%d-%s"), t.th32ThreadID, modname);
-			m_list.AddString(c);
-		} while (Thread32Next(h,&t));
-	}
-	SuspendThread(GetCurrentProcess());
-}
+//void DetectorConsole::OnBnClickedButton1()
+//{
+//
+//	m_list.ResetContent();
+//	HINSTANCE h_ntdll = GetModuleHandle(TEXT("ntdll"));
+//	ZWQUERYINFORMATIONTHREAD ZwQueryInformationThread = (ZWQUERYINFORMATIONTHREAD)GetProcAddress(h_ntdll, "ZwQueryInformationThread");
+//
+//	THREADENTRY32 t;
+//	t.dwSize = sizeof(THREADENTRY32);
+//	HANDLE h = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, GetCurrentProcessId());
+//	if (INVALID_HANDLE_VALUE == h) {
+//		MessageBox(TEXT("创建线程快照失败"));
+//		return;
+//	}
+//	if (Thread32First(h,&t)) {
+//		do {
+//			CString c;
+//			PVOID addr;
+//			HANDLE h_thread = OpenThread(THREAD_ALL_ACCESS, FALSE, t.th32ThreadID);
+//			ZwQueryInformationThread(h_thread, ThreadQuerySetWin32StartAddress, &addr, sizeof(addr), NULL);
+//			THREAD_BASIC_INFORMATION tbi;
+//			TCHAR modname[MAX_PATH];
+//			ZwQueryInformationThread(h_thread, ThreadBasicInformation, &tbi, sizeof(tbi), NULL);
+//			GetMappedFileName(OpenProcess(PROCESS_ALL_ACCESS, FALSE, (DWORD)tbi.ClientId.UniqueProcess), addr, modname, MAX_PATH);
+//
+//			c.Format(TEXT("thread id:%d-%s"), t.th32ThreadID, modname);
+//			m_list.AddString(c);
+//		} while (Thread32Next(h,&t));
+//	}
+//}
 
 
 void DetectorConsole::OnBnClickedButton2()
 {
 	// TODO: 在此添加控件通知处理程序代码
-	if (is_debug_patched) {
-		return;
-	}
-	Patch *p = new Patch();
-	p->removeDebuggerCheck_R3x64();
-	p->removePebDebuggerFlag_R3x64();
-	m_list.AddString(TEXT("Patch success"));
+	PatchConsole *p = new PatchConsole();
+	p->DoModal();
 	delete p;
 }
 
@@ -107,7 +101,7 @@ void DetectorConsole::OnBnClickedButton3()
 	m.dwSize = sizeof(MODULEENTRY32);
 	HANDLE h = CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, GetCurrentProcessId());
 	if (INVALID_HANDLE_VALUE == h) {
-		MessageBox(TEXT("Create snapshot failed"));
+		m_list.AddString(TEXT("Create snapshot failed"));
 		return;
 	}
 	if (Module32First(h,&m)) {

@@ -41,6 +41,8 @@ VOID myProc();
 #define MOV_RAX_R9 19
 //mov rax,[rsp]
 #define MOV_RAX_CRSP 20
+//ret
+#define RET 21
 
 //WRITE_MACHINE_CODE(DWORD_PTR p,DWORD machine_code_size,PACHAR machine_code,DWORD code,DWORD_PTR param)
 #define WRITE_MACHINE_CODE(p,machine_code_size,machine_code,code,param) machine_code_size=getMachineCode(machine_code,code,param);\
@@ -61,7 +63,8 @@ public:
 	BOOL removeDebuggerCheck_R3x64();
 	BOOL removePebDebuggerFlag_R3x64();
 	BOOL hookFunc(LPCTSTR module_name, LPCSTR func_name, DWORD code_size, DWORD_PTR func, PARG_CONTEXT &pcontext);
-
+	BOOL patchCreateToolhelp32Snapshot();
 	DWORD getMachineCode(PCHAR &machine_code, DWORD asm_code, DWORD_PTR address);
+
 };
 

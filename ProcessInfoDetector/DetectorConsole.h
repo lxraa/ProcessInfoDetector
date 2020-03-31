@@ -22,15 +22,13 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	afx_msg void OnBnClickedButton1();
 	afx_msg void OnBnClickedButton2();
 	CListBox m_list;
 	afx_msg void OnBnClickedButton3();
 	afx_msg void OnBnClickedButton5();
 	afx_msg void OnBnClickedButton4();
 
-private:
-	BOOL is_debug_patched = FALSE;
+
 public:
 	afx_msg void OnBnClickedButton6();
 };

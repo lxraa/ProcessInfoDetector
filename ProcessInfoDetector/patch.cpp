@@ -6,6 +6,10 @@
 extern "C" VOID removePebDebuggerFlag();
 extern "C" VOID myCall();
 
+Patch::Patch() {
+
+}
+
 BOOL Patch::removeDebuggerCheck_R3x64() {
 	HMODULE kernelbase = GetModuleHandle(TEXT("kernelbase.dll"));
 	FARPROC func = GetProcAddress(kernelbase, "CheckRemoteDebuggerPresent");
@@ -13,7 +17,7 @@ BOOL Patch::removeDebuggerCheck_R3x64() {
 	
 	QWORD obj_code = (QWORD)func + 0x50;
 	s.Format(TEXT("%p"), obj_code);
-	MessageBox(NULL, s, s, 0);
+	//MessageBox(NULL, s, s, 0);
 	char a[3] = { 0x90,0x90,0x90 };
 	//memcpy(a, (PVOID64)obj_code, 3);
 	DWORD pid = GetCurrentProcessId();
@@ -452,6 +456,18 @@ DWORD Patch::getMachineCode(PCHAR &machine_code, DWORD assembly_code, DWORD_PTR 
 #endif
 		return code_size;
 	}
+	case(RET): {
+#if defined _WIN64
+		code_size = 1;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0xC3 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+	}
 	default: {
 		return 0;
 	}
@@ -459,6 +475,22 @@ DWORD Patch::getMachineCode(PCHAR &machine_code, DWORD assembly_code, DWORD_PTR 
 
 }
 
-Patch::Patch() {
+BOOL Patch::patchCreateToolhelp32Snapshot() {
+	HMODULE kernel32 = GetModuleHandle(TEXT("kernel32.dll"));
+	FARPROC func = GetProcAddress(kernel32, "CreateToolhelp32Snapshot");
+	PCHAR machine_code = NULL;
+	DWORD machine_code_size = 0;
+	DWORD size = 10 + 1;
+	DWORD old_protect;
+	DWORD_PTR p = NULL;
+	//mov rax,INVALID_HANDLE_VALUE
+	//ret
+	p = (DWORD_PTR)func;
+	VirtualProtect(func, size, PAGE_EXECUTE_READWRITE, &old_protect);
+	WRITE_MACHINE_CODE((PVOID)p, machine_code_size, machine_code, MOV_RAX_8B, (DWORD_PTR)INVALID_HANDLE_VALUE);
+	p = p + machine_code_size;
+	WRITE_MACHINE_CODE((PVOID)p, machine_code_size, machine_code, RET, NULL);
 
+	return TRUE;
 }
+

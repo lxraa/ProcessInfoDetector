@@ -36,6 +36,9 @@
     <ClCompile Include="VEHConsole.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="PatchConsole.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="ProcessInfoDetector.def">
@@ -68,6 +71,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="VEHConsole.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PatchConsole.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -107,7 +107,7 @@ void HookDialog::OnLbnSelchangeList2()
 
 VOID proc_CreateFileW() {
 	CString s;
-	s.Format(TEXT("Invoke CreateFileW:%s %p %p %p"), args_CreateFileW->rcx, args_CreateFileW->rdx, args_CreateFileW->r8, args_CreateFileW->r9);
+	s.Format(TEXT("Invoke CreateFileW:%s %p %p %p"), *(PWCHAR)args_CreateFileW->rcx, args_CreateFileW->rdx, args_CreateFileW->r8, args_CreateFileW->r9);
 
 	hookdialog->info_box.AddString(s);
 	return;
@@ -130,7 +130,7 @@ void HookDialog::OnBnClickedButton3()
 
 VOID proc_CreateFileA() {
 	CString s;
-	s.Format(TEXT("Invoke CreateFileW:%p %s %p %p %p"),args_CreateFileA->ret_address, args_CreateFileA->rcx, args_CreateFileA->rdx, args_CreateFileA->r8, args_CreateFileA->r9);
+	s.Format(TEXT("Invoke CreateFileW:%p %s %p %p %p"),args_CreateFileA->ret_address, *(PCHAR)args_CreateFileA->rcx, args_CreateFileA->rdx, args_CreateFileA->r8, args_CreateFileA->r9);
 
 	hookdialog->info_box.AddString(s);
 	return;
