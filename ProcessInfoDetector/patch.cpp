@@ -48,31 +48,25 @@ BOOL Patch::removePebDebuggerFlag_R3x64() {
 
 //64位HOOK
 //code_size至少大于2+12=14
-BOOL Patch::hookFunc(LPCTSTR module_name,LPCSTR func_name,DWORD code_size,DWORD_PTR func) {
+BOOL Patch::hookFunc(LPCTSTR module_name,LPCSTR func_name,DWORD code_size,DWORD_PTR func, PARG_CONTEXT &pcontext) {
 	HMODULE h_module = GetModuleHandle(module_name);
 	FARPROC func_base = GetProcAddress(h_module, func_name);
 	/*
-	->save context
-
+	1、save context
 	->
-	1、myProc
-
-	->load context
-
+	2、myProc
 	->
-	2、old code
+	3、load context
 	->
-	3、return code
-
-	
+	4、old code
+	->
+	5、return code
+	->
 	*/
 	
-	DWORD save_context_size = sizeof(BYTE) * 50;
-
+	DWORD save_context_size = sizeof(BYTE) * 100;
 	DWORD my_call_size = sizeof(BYTE) * 50;
-
 	DWORD load_context_size = sizeof(BYTE) * 50;
-
 	DWORD old_code_size = code_size;
 	DWORD ret_code_size = sizeof(BYTE) * 20;
 	DWORD size = save_context_size + old_code_size + my_call_size + ret_code_size + load_context_size;
@@ -80,7 +74,6 @@ BOOL Patch::hookFunc(LPCTSTR module_name,LPCSTR func_name,DWORD code_size,DWORD_
 
 	PVOID code_area = VirtualAlloc(NULL, size, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 	
-	//PVOID my_call_area = (PVOID)((DWORD_PTR)code_area + old_code_size);
 	PVOID save_context_area = code_area;
 	PVOID my_call_area = (PVOID)((DWORD_PTR)save_context_area + save_context_size);
 	PVOID load_context_area = (PVOID)((DWORD_PTR)my_call_area + my_call_size);
@@ -92,7 +85,18 @@ BOOL Patch::hookFunc(LPCTSTR module_name,LPCSTR func_name,DWORD code_size,DWORD_
 	DWORD_PTR p = NULL;
 	PCHAR machine_code = NULL;
 	DWORD machine_code_size = 0;
-	//***save context
+	//1、save context
+	//mov rax,[rsp]
+	//mov [&pcontext->ret_address],rax
+	//mov rax,rcx
+	//mov [&pcontext->rcx],rax
+	//mov rax,rdx
+	//mov [&pcontext->rdx],rax
+	//mov rax,r8
+	//mov [&pcontext->r8],rax
+	//mov rax,r9
+	//mov [&pcontext->r9],rax
+
 	//push rcx
 	//push rdx
 	//push r8
@@ -100,59 +104,67 @@ BOOL Patch::hookFunc(LPCTSTR module_name,LPCSTR func_name,DWORD code_size,DWORD_
 	//sub rsp,48h
 	p = (DWORD_PTR)save_context_area;
 
-	machine_code_size = getMachineCode(machine_code, PUSH_RCX, (DWORD_PTR)func);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_RAX_CRSP, NULL);
+	p = p + machine_code_size;
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_8B_RAX, (DWORD_PTR)&(pcontext->ret_address));
+	p = p + machine_code_size;
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_RAX_RCX, NULL);
+	p = p + machine_code_size;
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_8B_RAX, (DWORD_PTR)&(pcontext->rcx));
+	p = p + machine_code_size;
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_RAX_RDX, NULL);
+	p = p + machine_code_size;
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_8B_RAX, (DWORD_PTR)&(pcontext->rdx));
+	p = p + machine_code_size;
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_RAX_R8, NULL);
+	p = p + machine_code_size;
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_8B_RAX, (DWORD_PTR)&(pcontext->r8));
+	p = p + machine_code_size;
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_RAX_R9, NULL);
+	p = p + machine_code_size;
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_8B_RAX, (DWORD_PTR)&(pcontext->r9));
+	p = p + machine_code_size;
+	
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, PUSH_RCX, NULL);
+	p = p + machine_code_size;
+	/*machine_code_size = getMachineCode(machine_code, PUSH_RCX, (DWORD_PTR)func);
 	CopyMemory((PVOID)p, machine_code, machine_code_size);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);*/
 
-	machine_code_size = getMachineCode(machine_code, PUSH_RDX, NULL);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, PUSH_RDX, NULL);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, PUSH_R8, NULL);
+	p = p + machine_code_size;
 
-	machine_code_size = getMachineCode(machine_code, PUSH_R8, NULL);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, PUSH_R9, NULL);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 
-	machine_code_size = getMachineCode(machine_code, PUSH_R9, NULL);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
-	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 	//抬栈，CALL的时候rsp需要0x10对齐，否则浮点数运算会出错
-	machine_code_size = getMachineCode(machine_code, SUB_RSP, (DWORD_PTR)0x48);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, SUB_RSP, (DWORD_PTR)0x48);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
-	//1.my proc	手动模拟call
+
+	//2、my proc	手动模拟call，因为call是相对寻址比较难算
 	//mov rax,ret_address
 	//push rax
 	//mov rax,func
 	//push rax
 	//ret
 	p = (DWORD_PTR)my_call_area;
-
-	machine_code_size = getMachineCode(machine_code, MOV_RAX_8B, (DWORD_PTR)func);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_RAX_8B, 0x0000000000000000)
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size,MEM_RELEASE);
 
-
-	machine_code_size = getMachineCode(machine_code, PUSH_RAX, 0);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, PUSH_RAX, NULL);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 
 
-	machine_code_size = getMachineCode(machine_code, MOV_PUSH_RET, (DWORD_PTR)func);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_PUSH_RET, (DWORD_PTR)func);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 
 	//修复push进栈的返回地址
 	CopyMemory((PVOID)(((DWORD_PTR)my_call_area) + 2), (PVOID)&p, sizeof(DWORD_PTR));
 	
-	//***load context
+	//3、load context
 	//add rsp,48h
 	//pop r9
 	//pop r8
@@ -160,58 +172,42 @@ BOOL Patch::hookFunc(LPCTSTR module_name,LPCSTR func_name,DWORD code_size,DWORD_
 	//pop rcx
 	p = (DWORD_PTR)load_context_area;
 
-	machine_code_size = getMachineCode(machine_code, ADD_RSP, (DWORD_PTR)0x48);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, ADD_RSP, (DWORD_PTR)0x48);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 
-	machine_code_size = getMachineCode(machine_code, POP_R9, NULL);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, POP_R9, NULL);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 
-	machine_code_size = getMachineCode(machine_code, POP_R8, NULL);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, POP_R8, NULL);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 
-	machine_code_size = getMachineCode(machine_code, POP_RDX, NULL);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, POP_RDX, NULL);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 
-	machine_code_size = getMachineCode(machine_code, POP_RCX, NULL);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, POP_RCX, NULL);
 	p = p + machine_code_size;
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
 
-	//2.old code
+	//4、.old code
 	CopyMemory((PVOID)old_code_area, (PVOID)func_base, old_code_size);
 
-	//3.ret code
+	//5、.ret code
 	DWORD_PTR ret_address = (DWORD_PTR)func_base + old_code_size;
-	machine_code_size = getMachineCode(machine_code, MOV_PUSH_RET, ret_address);
-	CopyMemory(ret_code_area, machine_code, machine_code_size);
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
+	WRITE_MACHINE_CODE(ret_code_area, machine_code_size, machine_code, MOV_PUSH_RET, ret_address);
+
 
 	//4.修改原函数地址指令
 	DWORD old_protect;
 	VirtualProtect(func_base, old_code_size, PAGE_EXECUTE_READWRITE, &old_protect);
-	
 	FillMemory(func_base, old_code_size, 0x90);
 
 	p = (DWORD_PTR)func_base;
 
-
-	machine_code_size = getMachineCode(machine_code, MOV_PUSH_RET, (DWORD_PTR)code_area);
-	CopyMemory((PVOID)p, machine_code, machine_code_size);
-	VirtualFree(machine_code, machine_code_size, MEM_RELEASE);
-	
+	WRITE_MACHINE_CODE(p, machine_code_size, machine_code, MOV_PUSH_RET, (DWORD_PTR)code_area);
 	return TRUE;
 }
 //返回机器码长度，MACHINE_CODE为返回的机器码，assembly_code是一个宏，为指定的汇编指令，address为地址
 
-DWORD Patch::getMachineCode(PCHAR &machine_code,DWORD assembly_code,DWORD_PTR param) {
+DWORD Patch::getMachineCode(PCHAR &machine_code, DWORD assembly_code, DWORD_PTR param) {
 	DWORD code_size;
 
 	switch (assembly_code) {
@@ -219,9 +215,9 @@ DWORD Patch::getMachineCode(PCHAR &machine_code,DWORD assembly_code,DWORD_PTR pa
 #if defined _WIN64
 		code_size = 12;
 		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-		CHAR ret_c1[100] = { 0x48,0xB8,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x50,0xC3 };
-		CopyMemory(ret_c1 + 2, &param, sizeof(DWORD_PTR));
-		CopyMemory(machine_code, ret_c1, code_size);
+		CHAR ret_c[20] = { 0x48,0xB8,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x50,0xC3 };
+		CopyMemory(ret_c + 2, &param, sizeof(DWORD_PTR));
+		CopyMemory(machine_code, ret_c, code_size);
 		return code_size;
 #else
 		break;
@@ -232,8 +228,8 @@ DWORD Patch::getMachineCode(PCHAR &machine_code,DWORD assembly_code,DWORD_PTR pa
 #if defined _WIN64
 		code_size = 1;
 		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-		CHAR ret_c2[10] = { 0x50 };
-		CopyMemory(machine_code, ret_c2, code_size);
+		CHAR ret_c[10] = { 0x50 };
+		CopyMemory(machine_code, ret_c, code_size);
 		return code_size;
 #else
 		break;
@@ -244,9 +240,9 @@ DWORD Patch::getMachineCode(PCHAR &machine_code,DWORD assembly_code,DWORD_PTR pa
 #if defined _WIN64
 		code_size = 10;
 		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-		CHAR ret_c3[100] = { 0x48,0xB8,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
-		CopyMemory(ret_c3 + 2, &param, sizeof(DWORD_PTR));
-		CopyMemory(machine_code, ret_c3, code_size);
+		CHAR ret_c[100] = { 0x48,0xB8,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
+		CopyMemory(ret_c + 2, &param, sizeof(DWORD_PTR));
+		CopyMemory(machine_code, ret_c, code_size);
 		return code_size;
 #else
 		break;
@@ -381,10 +377,86 @@ DWORD Patch::getMachineCode(PCHAR &machine_code,DWORD assembly_code,DWORD_PTR pa
 		return code_size;
 
 	}
+	case(MOV_8B_RAX): {
+#if defined _WIN64
+		code_size = 10;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x48,0xA3,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
+		CopyMemory(ret_c + 2, &param, sizeof(DWORD_PTR));
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+
+	}
+	case(MOV_RAX_RCX): {
+#if defined _WIN64
+		code_size = 3;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x48,0x8B,0xC1 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+
+	}
+	case(MOV_RAX_RDX): {
+#if defined _WIN64
+		code_size = 3;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x48,0x8B,0xC2 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+	}
+	case(MOV_RAX_R8): {
+#if defined _WIN64
+		code_size = 3;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x49,0x8B,0xC0 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+	}
+	case(MOV_RAX_R9): {
+#if defined _WIN64
+		code_size = 3;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x49,0x8B,0xC1 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+	}
+	case(MOV_RAX_CRSP): {
+#if defined _WIN64
+		code_size = 4;
+		machine_code = (PCHAR)VirtualAlloc(NULL, code_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		CHAR ret_c[10] = { 0x48,0x8B,0x04,0x24 };
+		CopyMemory(machine_code, ret_c, code_size);
+		return code_size;
+#else
+		break;
+#endif
+		return code_size;
+	}
 	default: {
 		return 0;
 	}
 	}
+
 }
 
 Patch::Patch() {

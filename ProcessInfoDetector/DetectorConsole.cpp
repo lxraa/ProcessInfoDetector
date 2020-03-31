@@ -88,9 +88,13 @@ void DetectorConsole::OnBnClickedButton1()
 void DetectorConsole::OnBnClickedButton2()
 {
 	// TODO: 在此添加控件通知处理程序代码
+	if (is_debug_patched) {
+		return;
+	}
 	Patch *p = new Patch();
 	p->removeDebuggerCheck_R3x64();
 	p->removePebDebuggerFlag_R3x64();
+	m_list.AddString(TEXT("Patch success"));
 	delete p;
 }
 
@@ -109,7 +113,8 @@ void DetectorConsole::OnBnClickedButton3()
 	if (Module32First(h,&m)) {
 		do {
 			CString s;
-			s.Format(TEXT("module:%s"), m.szExePath);
+			s.Format(TEXT("module:%s    addr:%p    size:%x"), m.szExePath, m.modBaseAddr, m.modBaseSize);
+
 			m_list.AddString(s);
 			
 		} while (Module32Next(h,&m));

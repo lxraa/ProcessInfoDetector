@@ -29,7 +29,10 @@ public:
 	afx_msg void OnBnClickedButton5();
 	afx_msg void OnBnClickedButton4();
 
-
+private:
+	BOOL is_debug_patched = FALSE;
+public:
+	afx_msg void OnBnClickedButton6();
 };
 
 typedef enum _THREADINFOCLASS {

@@ -25,4 +25,6 @@ public:
 	afx_msg void OnLbnSelchangeList2();
 	afx_msg void OnBnClickedButton2();
 	CListBox info_box;
+	afx_msg void OnBnClickedButton3();
+	afx_msg void OnBnClickedButton4();
 };
