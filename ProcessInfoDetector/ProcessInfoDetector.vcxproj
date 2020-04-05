@@ -222,6 +222,7 @@
     <ClInclude Include="HookDialog.h" />
     <ClInclude Include="patch.h" />
     <ClInclude Include="PatchConsole.h" />
+    <ClInclude Include="PEB_TEB.h" />
     <ClInclude Include="ProcessInfoDetector.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />

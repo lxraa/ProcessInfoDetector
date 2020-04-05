@@ -76,6 +76,9 @@
     <ClInclude Include="PatchConsole.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="PEB_TEB.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ProcessInfoDetector.rc">

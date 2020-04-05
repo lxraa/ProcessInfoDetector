@@ -24,6 +24,11 @@ protected:
 
 public:
 	afx_msg void OnBnClickedButton1();
-	CListBox info_box;
+	CListBox m_list;
 	VEHConsole *vehconsole;
+	afx_msg void OnBnClickedButton2();
+	CEdit m_edit;
+	afx_msg void OnBnClickedButton3();
+	afx_msg void OnBnClickedButton4();
+	afx_msg void OnBnClickedButton5();
 };

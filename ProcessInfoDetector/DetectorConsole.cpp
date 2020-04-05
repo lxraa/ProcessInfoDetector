@@ -12,13 +12,7 @@
 #include "VEHConsole.h"
 #include "PatchConsole.h"
 // DetectorConsole 对话框
-typedef NTSTATUS (WINAPI*ZWQUERYINFORMATIONTHREAD)(
-_In_      HANDLE          ThreadHandle,
-_In_      THREADINFOCLASS ThreadInformationClass,
-_In_      PVOID           ThreadInformation,
-_In_      ULONG           ThreadInformationLength,
-_Out_opt_ PULONG          ReturnLength
-);
+
 
 IMPLEMENT_DYNAMIC(DetectorConsole, CDialogEx)
 
@@ -46,6 +40,7 @@ BEGIN_MESSAGE_MAP(DetectorConsole, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON3, &DetectorConsole::OnBnClickedButton3)
 	ON_BN_CLICKED(IDC_BUTTON5, &DetectorConsole::OnBnClickedButton5)
 	ON_BN_CLICKED(IDC_BUTTON4, &DetectorConsole::OnBnClickedButton4)
+	ON_BN_CLICKED(IDC_BUTTON1, &DetectorConsole::OnBnClickedButton1)
 END_MESSAGE_MAP()
 
 
@@ -114,6 +109,9 @@ void DetectorConsole::OnBnClickedButton3()
 		} while (Module32Next(h,&m));
 	}
 
+	Patch *p = new Patch();
+	PPEB p_peb = p->getPEB();
+	delete p;
 
 }
 
@@ -138,3 +136,9 @@ void DetectorConsole::OnBnClickedButton4()
 }
 
 
+
+
+void DetectorConsole::OnBnClickedButton1()
+{
+	// TODO: 在此添加控件通知处理程序代码
+}

@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-
+#include <map>
 // HookDialog 对话框
 
 class HookDialog : public CDialogEx
@@ -21,10 +21,10 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	afx_msg void OnBnClickedButton1();
 	afx_msg void OnLbnSelchangeList2();
-	afx_msg void OnBnClickedButton2();
-	CListBox info_box;
-	afx_msg void OnBnClickedButton3();
-	afx_msg void OnBnClickedButton4();
+	CListBox m_list;
+	CComboBox m_combox;
+	std::map<CString, INT> kv;
+	afx_msg void OnCbnDropdownCombo1();
+	afx_msg void OnBnClickedButton5();
 };

@@ -4,7 +4,6 @@
 #include <TlHelp32.h>
 
 extern "C" VOID removePebDebuggerFlag();
-extern "C" VOID myCall();
 
 Patch::Patch() {
 
@@ -48,7 +47,6 @@ BOOL Patch::removePebDebuggerFlag_R3x64() {
 #endif
 	return TRUE;
 }
-
 
 //64位HOOK
 //code_size至少大于2+12=14
@@ -494,3 +492,31 @@ BOOL Patch::patchCreateToolhelp32Snapshot() {
 	return TRUE;
 }
 
+
+
+PTEB Patch::getTEB(HANDLE h_thread) {
+	ZWQUERYINFORMATIONTHREAD ZwQueryInformationThread;
+	HINSTANCE ntdll = GetModuleHandle(TEXT("ntdll.dll"));
+	ZwQueryInformationThread = (ZWQUERYINFORMATIONTHREAD)GetProcAddress(ntdll, "ZwQueryInformationThread");
+	THREAD_BASIC_INFORMATION tbi;
+	ZwQueryInformationThread(h_thread, ThreadBasicInformation, &tbi, sizeof(tbi), NULL);
+	return (PTEB)tbi.TebBaseAddress;
+}
+
+PPEB Patch::getPEB() {
+	DWORD current_tid = GetCurrentThreadId();
+	HANDLE h_thread = OpenThread(THREAD_ALL_ACCESS, FALSE, current_tid);
+	if (h_thread == NULL) {
+		return NULL;
+	}
+	PTEB p = getTEB(h_thread);
+	CloseHandle(h_thread);
+	return (PPEB)p->ProcessEnvironmentBlock;
+}
+
+PEXCEPTION_REGISTRATION_RECORD Patch::getSEHChain(HANDLE h_thread) {
+
+	PVOID teb = getTEB(h_thread);
+	PNT_TIB nt_tib = (PNT_TIB)teb;
+	return nt_tib->ExceptionList;
+}

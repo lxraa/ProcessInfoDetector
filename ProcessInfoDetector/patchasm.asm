@@ -1,8 +1,5 @@
 option casemap:none
-includelib kernel32.lib
-includelib user32.lib
-MessageBoxA PROTO :DWORD, :DWORD, :DWORD, :DWORD
-MessageBox equ <MessageBoxA>
+
 .data
 	tt db "123",0
 .code
@@ -18,13 +15,5 @@ removePebDebuggerFlag PROC
 	ret
 removePebDebuggerFlag ENDP
 
-myProc PROC
-	
-	ret
-myProc ENDP
 
-myCall PROC
-	mov rax,offset myProc
-	call rax
-myCall ENDP
 end

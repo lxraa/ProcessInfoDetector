@@ -1,4 +1,5 @@
 #pragma once
+#include "PEB_TEB.h"
 VOID myProc();
 // mov rax,#address		
 #define MOV_RAX_8B 1
@@ -65,6 +66,47 @@ public:
 	BOOL hookFunc(LPCTSTR module_name, LPCSTR func_name, DWORD code_size, DWORD_PTR func, PARG_CONTEXT &pcontext);
 	BOOL patchCreateToolhelp32Snapshot();
 	DWORD getMachineCode(PCHAR &machine_code, DWORD asm_code, DWORD_PTR address);
-
+	PEXCEPTION_REGISTRATION_RECORD getSEHChain(HANDLE h_thread);
+	PTEB getTEB(HANDLE h_thread);
+	PPEB getPEB();
 };
+
+typedef enum _THREADINFOCLASS {
+	ThreadBasicInformation,
+	ThreadTimes,
+	ThreadPriority,
+	ThreadBasePriority,
+	ThreadAffinityMask,
+	ThreadImpersonationToken,
+	ThreadDescriptorTableEntry,
+	ThreadEnableAlignmentFaultFixup,
+	ThreadEventPair_Reusable,
+	ThreadQuerySetWin32StartAddress,
+	ThreadZeroTlsCell,
+	ThreadPerformanceCount,
+	ThreadAmILastThread,
+	ThreadIdealProcessor,
+	ThreadPriorityBoost,
+	ThreadSetTlsArrayAddress,
+	ThreadIsIoPending,
+	ThreadHideFromDebugger,
+	ThreadBreakOnTermination,
+	MaxThreadInfoClass
+}THREADINFOCLASS;
+typedef struct _THREAD_BASIC_INFORMATION {
+	LONG ExitStatus;
+	PVOID TebBaseAddress;
+	CLIENT_ID ClientId;
+	LONG AffinityMask;
+	LONG Priority;
+	LONG BasePriority;
+}THREAD_BASIC_INFORMATION, *PTHREAD_BASIC_INFORMATION;
+
+typedef NTSTATUS(WINAPI*ZWQUERYINFORMATIONTHREAD)(
+	_In_      HANDLE          ThreadHandle,
+	_In_      THREADINFOCLASS ThreadInformationClass,
+	_In_      PVOID           ThreadInformation,
+	_In_      ULONG           ThreadInformationLength,
+	_Out_opt_ PULONG          ReturnLength
+	);
 
